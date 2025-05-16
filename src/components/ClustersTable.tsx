@@ -113,6 +113,9 @@ const LabelEditDialog: React.FC<LabelEditDialogProps> = ({
   const [saving, setSaving] = useState(false);
   const [selectedLabelIndex, setSelectedLabelIndex] = useState<number | null>(null);
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
+  // Track binding policy labels
+  const [bindingPolicyLabels, setBindingPolicyLabels] = useState<string[]>([]);
+  const [errorShown, setErrorShown] = useState(false);
   const keyInputRef = useRef<HTMLInputElement>(null);
   const valueInputRef = useRef<HTMLInputElement>(null);
   
@@ -132,19 +135,42 @@ const LabelEditDialog: React.FC<LabelEditDialogProps> = ({
     
     return false;
   };
+  
+  // Check if label is used in binding policy
+  const isBindingPolicyLabel = (key: string): boolean => {
+    return bindingPolicyLabels.includes(key);
+  };
 
   // Update handleRemoveLabel to check for protected labels
   const handleRemoveLabel = (index: number) => {
     const labelToRemove = labels[index];
     const labelKey = labelToRemove.key;
     
+    // Reset error shown state
+    setErrorShown(false);
+    
     // Check if it's a bulk operation (don't allow bulk delete of protected labels)
     const isBulkOperation = selectedClusters && selectedClusters.length > 1;
     
     // Check if label is protected
     if (isProtectedLabel(labelKey)) {
-      toast.error(`Cannot delete protected system label: ${labelKey}`, {
+      toast.error(`Cannot delete protected default label: ${labelKey}`, {
         icon: '🔒',
+        style: {
+          borderRadius: '10px',
+          background: isDark ? '#1e293b' : '#ffffff',
+          color: isDark ? '#f1f5f9' : '#1e293b',
+          border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`,
+        },
+        duration: 5000,
+      });
+      return;
+    }
+    
+    // Check if label is used in binding policy - prevent even trying API call
+    if (isBindingPolicyLabel(labelKey)) {
+      toast.error(`Cannot delete label used in binding policy: ${labelKey}`, {
+        icon: '🔗',
         style: {
           borderRadius: '10px',
           background: isDark ? '#1e293b' : '#ffffff',
@@ -192,16 +218,39 @@ const LabelEditDialog: React.FC<LabelEditDialogProps> = ({
           console.error("Error deleting label:", error);
           setDeleteLoading(null);
           
-          toast.error(`Failed to delete label: ${error.message}`, {
-            icon: '❌',
-            style: {
-              borderRadius: '10px',
-              background: isDark ? '#1e293b' : '#ffffff',
-              color: isDark ? '#f1f5f9' : '#1e293b',
-              border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`,
-            },
-            duration: 5000,
-          });
+          // Check if the error is related to binding policy usage
+          const errorMessage = error.message || "";
+          
+          if (errorMessage.includes("used in binding policy")) {
+            // Add this label to binding policy labels to prevent future attempts
+            setBindingPolicyLabels(prev => [...prev, labelKey]);
+            
+            // Only show the error message once
+            if (!errorShown) {
+              setErrorShown(true);
+              toast.error(`Cannot delete label used in binding policy: ${labelKey}`, {
+                icon: '🔗',
+                style: {
+                  borderRadius: '10px',
+                  background: isDark ? '#1e293b' : '#ffffff',
+                  color: isDark ? '#f1f5f9' : '#1e293b',
+                  border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`,
+                },
+                duration: 5000,
+              });
+            }
+          } else {
+            toast.error(`Failed to delete label: ${error.message}`, {
+              icon: '❌',
+              style: {
+                borderRadius: '10px',
+                background: isDark ? '#1e293b' : '#ffffff',
+                color: isDark ? '#f1f5f9' : '#1e293b',
+                border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`,
+              },
+              duration: 5000,
+            });
+          }
         }
       }
     );
@@ -230,7 +279,9 @@ const LabelEditDialog: React.FC<LabelEditDialogProps> = ({
       setLabelSearch("");
       setIsSearching(false);
       setSelectedLabelIndex(null);
-      
+      setBindingPolicyLabels([]); // Reset binding policy labels
+      setErrorShown(false); // Reset error shown state
+    
       // Focus key input after a short delay
       setTimeout(() => {
         if (keyInputRef.current) {
@@ -545,7 +596,7 @@ const LabelEditDialog: React.FC<LabelEditDialogProps> = ({
                           <span>{label.value}</span>
                         </span>
                         {isProtectedLabel(label.key) && (
-                          <Tooltip title="System label (protected)">
+                          <Tooltip title="Default label (protected)">
                             <span style={{ 
                               fontSize: '10px', 
                               padding: '1px 4px', 
@@ -554,12 +605,30 @@ const LabelEditDialog: React.FC<LabelEditDialogProps> = ({
                               color: colors.warning, 
                               marginLeft: '4px' 
                             }}>
-                              SYSTEM
+                              DEFAULT
+                            </span>
+                          </Tooltip>
+                        )}
+                        {isBindingPolicyLabel(label.key) && !isProtectedLabel(label.key) && (
+                          <Tooltip title="Used in binding policy">
+                            <span style={{ 
+                              fontSize: '10px', 
+                              padding: '1px 4px', 
+                              borderRadius: '3px', 
+                              backgroundColor: isDark ? 'rgba(47, 134, 255, 0.2)' : 'rgba(47, 134, 255, 0.1)',
+                              color: colors.primary, 
+                              marginLeft: '4px' 
+                            }}>
+                              POLICY
                             </span>
                           </Tooltip>
                         )}
                       </div>
-                      <Tooltip title={isProtectedLabel(label.key) ? "Cannot delete system label" : "Remove Label"}>
+                      <Tooltip title={
+                        isProtectedLabel(label.key) 
+                          ? "Cannot delete default label" 
+                          : "Remove Label"
+                      }>
                         <div>
                           <IconButton 
                             size="small" 

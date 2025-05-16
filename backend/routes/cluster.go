@@ -43,4 +43,5 @@ func setupClusterRoutes(router *gin.Engine) {
 	router.GET("/api/cluster/details/:name", handlers.GetClusterDetailsHandler)
 	
 	router.DELETE("/api/clusters/:context/:cluster/labels/:key", api.DeleteClusterLabel)
+	
 }

@@ -1,4 +1,4 @@
-import { memo, useState, useEffect, useCallback } from "react";
+import { memo, useState, useEffect, useCallback, useRef } from "react";
 import { Box, Button, Typography } from "@mui/material";
 import { ZoomIn, ZoomOut } from "@mui/icons-material";
 import { useReactFlow } from "reactflow";
@@ -12,53 +12,177 @@ interface ZoomControlsProps {
 }
 
 export const ZoomControls = memo<ZoomControlsProps>(({ theme, onToggleCollapse, isCollapsed, onExpandAll, onCollapseAll }) => {
-  const { getZoom, setViewport } = useReactFlow();
+  const { getZoom, setViewport, fitView } = useReactFlow();
   const [zoomLevel, setZoomLevel] = useState<number>(100);
+  const animatingRef = useRef(false);
+  const initializedRef = useRef(false);
+  const zoomRatioRef = useRef<number | null>(null);
+  const lastZoomOperationRef = useRef<number | null>(null);
+  const zoomStabilityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Avoid frequent zoom level updates
+  const updateLockRef = useRef(false);
 
   const snapToStep = useCallback((zoom: number) => {
     const step = 10;
     return Math.round(zoom / step) * step;
   }, []);
 
+  // Initialize zoom ratio on component mount
   useEffect(() => {
-    const currentZoom = getZoom() * 100;
-    const snappedZoom = snapToStep(currentZoom);
-    setZoomLevel(Math.min(Math.max(snappedZoom, 10), 200));
+    if (!initializedRef.current) {
+      const timer = setTimeout(() => {
+        try {
+          const initialZoom = getZoom();
+          
+          if (initialZoom && !isNaN(initialZoom) && initialZoom > 0) {
+            console.log(`[ZoomControls] Initializing with zoom: ${initialZoom}`);
+            zoomRatioRef.current = initialZoom;
+            initializedRef.current = true;
+            setZoomLevel(100);
+          }
+        } catch (e) {
+          console.error("[ZoomControls] Error during initialization:", e);
+        }
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [getZoom]);
+
+  // Update zoom level display based on actual zoom
+  const updateZoomLevelDisplay = useCallback(() => {
+    if (!initializedRef.current || !zoomRatioRef.current || updateLockRef.current) return;
+    
+    try {
+      const actualZoom = getZoom();
+      const normalizedZoom = (actualZoom / zoomRatioRef.current) * 100;
+      const snappedZoom = snapToStep(normalizedZoom);
+      setZoomLevel(Math.min(Math.max(snappedZoom, 10), 200));
+    } catch (e) {
+      console.error("[ZoomControls] Error updating zoom display:", e);
+    }
   }, [getZoom, snapToStep]);
 
-  const animateZoom = useCallback((targetZoom: number, duration: number = 200) => {
-    const startZoom = getZoom();
-    const startTime = performance.now();
-
-    const step = (currentTime: number) => {
-      const elapsed = currentTime - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      const newZoom = startZoom + (targetZoom - startZoom) * progress;
-      setViewport({ zoom: newZoom, x: 0, y: 10 });
-
-      if (progress < 1) {
-        requestAnimationFrame(step);
-      } else {
-        setZoomLevel(snapToStep(newZoom * 100));
+  // Monitor zoom changes, but don't interfere with user operations
+  useEffect(() => {
+    // Initial update
+    if (!updateLockRef.current) {
+      updateZoomLevelDisplay();
+    }
+    
+    // Periodic check to sync display with actual zoom
+    const intervalId = setInterval(() => {
+      // Only update if we're not in the middle of a user-initiated zoom operation
+      if (!animatingRef.current && !updateLockRef.current && 
+          (!lastZoomOperationRef.current || (Date.now() - lastZoomOperationRef.current) > 500)) {
+        updateZoomLevelDisplay();
       }
-    };
+    }, 1000);
+    
+    return () => clearInterval(intervalId);
+  }, [getZoom, snapToStep, updateZoomLevelDisplay]);
 
-    requestAnimationFrame(step);
+  const animateZoom = useCallback((targetZoomLevel: number, duration: number = 250) => {
+    if (!zoomRatioRef.current) return;
+    
+    // Lock updates during zoom operation
+    updateLockRef.current = true;
+    
+    try {
+      const startZoom = getZoom();
+      // Convert from display percentage to actual zoom value
+      const targetZoom = (targetZoomLevel / 100) * zoomRatioRef.current;
+      
+      const startTime = performance.now();
+      animatingRef.current = true;
+      lastZoomOperationRef.current = Date.now();
+
+      const step = (currentTime: number) => {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const newZoom = startZoom + (targetZoom - startZoom) * progress;
+        
+        // Apply the zoom
+        setViewport({ zoom: newZoom, x: 0, y: 0 });
+        
+        // Update display value during animation
+        const displayZoom = snapToStep((newZoom / zoomRatioRef.current!) * 100);
+        setZoomLevel(Math.min(Math.max(displayZoom, 10), 200));
+
+        if (progress < 1) {
+          requestAnimationFrame(step);
+        } else {
+          // Ensure the final zoom level is set correctly
+          setZoomLevel(targetZoomLevel);
+          
+          // Release lock after a delay to prevent interference
+          if (zoomStabilityTimeoutRef.current) {
+            clearTimeout(zoomStabilityTimeoutRef.current);
+          }
+          
+          zoomStabilityTimeoutRef.current = setTimeout(() => {
+            animatingRef.current = false;
+            updateLockRef.current = false;
+            zoomStabilityTimeoutRef.current = null;
+          }, 300);
+        }
+      };
+
+      requestAnimationFrame(step);
+    } catch (e) {
+      console.error("[ZoomControls] Error during zoom animation:", e);
+      animatingRef.current = false;
+      updateLockRef.current = false;
+    }
   }, [getZoom, setViewport, snapToStep]);
 
+  const handleResetZoom = useCallback(() => {
+    if (!initializedRef.current || !zoomRatioRef.current) return;
+    animateZoom(100);
+  }, [animateZoom]);
+
   const handleZoomIn = useCallback(() => {
-    const currentZoom = getZoom() * 100;
-    const newZoomPercentage = snapToStep(currentZoom + 10);
-    const newZoom = Math.min(newZoomPercentage / 100, 2);
-    animateZoom(newZoom);
-  }, [animateZoom, getZoom, snapToStep]);
+    if (!initializedRef.current) return;
+    
+    const newZoomLevel = Math.min(zoomLevel + 10, 200);
+    animateZoom(newZoomLevel);
+  }, [zoomLevel, animateZoom]);
 
   const handleZoomOut = useCallback(() => {
-    const currentZoom = getZoom() * 100;
-    const newZoomPercentage = snapToStep(currentZoom - 10);
-    const newZoom = Math.max(newZoomPercentage / 100, 0.1);
-    animateZoom(newZoom);
-  }, [animateZoom, getZoom, snapToStep]);
+    if (!initializedRef.current) return;
+    
+    const newZoomLevel = Math.max(zoomLevel - 10, 10);
+    animateZoom(newZoomLevel);
+  }, [zoomLevel, animateZoom]);
+
+  const handleFitView = useCallback(() => {
+    try {
+      // Lock updates during fit view
+      updateLockRef.current = true;
+      
+      fitView({ duration: 250, padding: 0.1 });
+      
+      // Set zoom level to 100% after fit
+      setTimeout(() => {
+        // Store the new zoom after fit as our reference
+        const newBaseZoom = getZoom();
+        if (newBaseZoom && !isNaN(newBaseZoom) && newBaseZoom > 0) {
+          zoomRatioRef.current = newBaseZoom;
+        }
+        
+        setZoomLevel(100);
+        
+        // Release lock after a delay
+        setTimeout(() => {
+          updateLockRef.current = false;
+        }, 300);
+      }, 300);
+    } catch (e) {
+      console.error("[ZoomControls] Error fitting view:", e);
+      updateLockRef.current = false;
+    }
+  }, [fitView, getZoom]);
 
   return (
     <Box
@@ -71,6 +195,8 @@ export const ZoomControls = memo<ZoomControlsProps>(({ theme, onToggleCollapse, 
         background: theme === "dark" ? "#333" : "#fff",
         padding: "4px",
         boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
+        borderRadius: "4px",
+        zIndex: 10,
       }}
     >
       <Button
@@ -121,6 +247,36 @@ export const ZoomControls = memo<ZoomControlsProps>(({ theme, onToggleCollapse, 
       </Button>
       <Button
         variant="text"
+        onClick={handleResetZoom}
+        title="Reset Zoom to 100%"
+        sx={{
+          color: theme === "dark" ? "#fff" : "#6d7f8b",
+          "&:hover": {
+            backgroundColor: theme === "dark" ? "#555" : "#e3f2fd",
+          },
+          minWidth: "36px",
+          padding: "4px",
+        }}
+      >
+        <i className="fa fa-home fa-fw" style={{ fontSize: "17px" }} />
+      </Button>
+      <Button
+        variant="text"
+        onClick={handleFitView}
+        title="Fit View"
+        sx={{
+          color: theme === "dark" ? "#fff" : "#6d7f8b",
+          "&:hover": {
+            backgroundColor: theme === "dark" ? "#555" : "#e3f2fd",
+          },
+          minWidth: "36px",
+          padding: "4px",
+        }}
+      >
+        <i className="fa fa-arrows-alt fa-fw" style={{ fontSize: "16px" }} />
+      </Button>
+      <Button
+        variant="text"
         onClick={handleZoomIn}
         title="Zoom In"
         sx={{
@@ -161,6 +317,7 @@ export const ZoomControls = memo<ZoomControlsProps>(({ theme, onToggleCollapse, 
           justifyContent: "center",
           alignItems: "center",
           width: "50px",
+          borderRadius: "3px",
         }}
       >
         {zoomLevel}%

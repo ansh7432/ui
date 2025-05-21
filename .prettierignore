@@ -1,0 +1,30 @@
+# Build artifacts
+dist
+build
+coverage
+
+# Node modules
+node_modules
+vendor
+
+# Logs
+*.log
+
+# Cache directories
+.cache
+.temp
+
+# Environment variables
+.env*
+!.env.example
+
+# IDE specific files
+.idea
+.vscode
+
+
+# Docker files to ignore
+Dockerfile
+docker-compose.yml
+docker-compose*.yml
+*.dockerfile

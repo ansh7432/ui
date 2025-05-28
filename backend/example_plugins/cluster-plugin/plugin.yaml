@@ -4,8 +4,8 @@ version: 1.0.0
 description: Plugin for cluster onboarding and detachment operations
 author: CNCF LFX Mentee
 compatibility:
-  kubestellar: ">=0.21.0"
-  go: ">=1.21"
+  kubestellar: '>=0.21.0'
+  go: '>=1.21'
 endpoints:
   - path: /onboard
     method: POST

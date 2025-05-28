@@ -18,19 +18,9 @@ import {
   TableRow,
   Paper,
   IconButton,
-
   Alert,
 } from '@mui/material';
-import {
-  X,
-  Shield,
-  Package,
-  Code,
-  Server,
-  Clock,
-  CheckCircle,
-  AlertCircle,
-} from 'lucide-react';
+import { X, Shield, Package, Code, Server, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import useTheme from '../../stores/themeStore';
 
 interface Plugin {
@@ -127,11 +117,7 @@ const PluginDetails: React.FC<PluginDetailsProps> = ({
           <Typography variant="h5" component="h2">
             {plugin.Name}
           </Typography>
-          <Chip
-            label={plugin.Version}
-            variant="outlined"
-            size="small"
-          />
+          <Chip label={plugin.Version} variant="outlined" size="small" />
           <Chip
             label={plugin.status || 'loaded'}
             color={getStatusColor() as any}
@@ -147,34 +133,46 @@ const PluginDetails: React.FC<PluginDetailsProps> = ({
       <DialogContent sx={{ p: 3 }}>
         {/* Basic Information */}
         <Box sx={{ mb: 4 }}>
-          <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography
+            variant="h6"
+            gutterBottom
+            sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+          >
             <Package size={18} />
             Plugin Information
           </Typography>
-          
+
           <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, mb: 2 }}>
             <Box>
-              <Typography variant="subtitle2" color="textSecondary">ID</Typography>
+              <Typography variant="subtitle2" color="textSecondary">
+                ID
+              </Typography>
               <Typography variant="body2" sx={{ fontFamily: 'monospace', mt: 0.5 }}>
                 {plugin.ID}
               </Typography>
             </Box>
             <Box>
-              <Typography variant="subtitle2" color="textSecondary">Author</Typography>
+              <Typography variant="subtitle2" color="textSecondary">
+                Author
+              </Typography>
               <Typography variant="body2" sx={{ mt: 0.5 }}>
                 {plugin.Author}
               </Typography>
             </Box>
           </Box>
 
-          <Typography variant="subtitle2" color="textSecondary">Description</Typography>
+          <Typography variant="subtitle2" color="textSecondary">
+            Description
+          </Typography>
           <Typography variant="body2" sx={{ mt: 0.5, lineHeight: 1.6 }}>
             {plugin.Description}
           </Typography>
 
           {plugin.loadedAt && (
             <Box sx={{ mt: 2 }}>
-              <Typography variant="subtitle2" color="textSecondary">Loaded At</Typography>
+              <Typography variant="subtitle2" color="textSecondary">
+                Loaded At
+              </Typography>
               <Typography variant="body2" sx={{ mt: 0.5 }}>
                 {new Date(plugin.loadedAt).toLocaleString()}
               </Typography>
@@ -186,14 +184,18 @@ const PluginDetails: React.FC<PluginDetailsProps> = ({
 
         {/* Endpoints */}
         <Box sx={{ mb: 4 }}>
-          <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography
+            variant="h6"
+            gutterBottom
+            sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+          >
             <Server size={18} />
             API Endpoints ({plugin.Endpoints.length})
           </Typography>
-          
-          <TableContainer 
-            component={Paper} 
-            sx={{ 
+
+          <TableContainer
+            component={Paper}
+            sx={{
               backgroundColor: isDark ? '#111827' : '#f9fafb',
               border: `1px solid ${isDark ? '#374151' : '#e5e7eb'}`,
             }}
@@ -214,20 +216,25 @@ const PluginDetails: React.FC<PluginDetailsProps> = ({
                       <Chip
                         label={endpoint.Method}
                         size="small"
-                        color={endpoint.Method === 'GET' ? 'primary' : 
-                               endpoint.Method === 'POST' ? 'success' : 
-                               endpoint.Method === 'DELETE' ? 'error' : 'default'}
+                        color={
+                          endpoint.Method === 'GET'
+                            ? 'primary'
+                            : endpoint.Method === 'POST'
+                              ? 'success'
+                              : endpoint.Method === 'DELETE'
+                                ? 'error'
+                                : 'default'
+                        }
                         sx={{ minWidth: 60 }}
                       />
                     </TableCell>
-                    <TableCell sx={{ fontFamily: 'monospace' }}>
-                      {endpoint.Path}
-                    </TableCell>
+                    <TableCell sx={{ fontFamily: 'monospace' }}>{endpoint.Path}</TableCell>
                     <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>
                       {endpoint.Handler}
                     </TableCell>
                     <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>
-                      /api/plugins/{plugin.ID}{endpoint.Path}
+                      /api/plugins/{plugin.ID}
+                      {endpoint.Path}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -241,7 +248,11 @@ const PluginDetails: React.FC<PluginDetailsProps> = ({
         {/* Dependencies & Permissions */}
         <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, mb: 4 }}>
           <Box>
-            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography
+              variant="h6"
+              gutterBottom
+              sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+            >
               <Code size={18} />
               Dependencies ({plugin.Dependencies.length})
             </Typography>
@@ -268,20 +279,18 @@ const PluginDetails: React.FC<PluginDetailsProps> = ({
           </Box>
 
           <Box>
-            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography
+              variant="h6"
+              gutterBottom
+              sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+            >
               <Shield size={18} />
               Permissions ({plugin.Permissions.length})
             </Typography>
             {plugin.Permissions.length > 0 ? (
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                 {plugin.Permissions.map((perm, index) => (
-                  <Chip
-                    key={index}
-                    label={perm}
-                    size="small"
-                    color="warning"
-                    variant="outlined"
-                  />
+                  <Chip key={index} label={perm} size="small" color="warning" variant="outlined" />
                 ))}
               </Box>
             ) : (
@@ -302,7 +311,8 @@ const PluginDetails: React.FC<PluginDetailsProps> = ({
               </Typography>
               <Alert severity="info" sx={{ backgroundColor: isDark ? '#1e3a8a20' : '#dbeafe' }}>
                 <Typography variant="body2">
-                  <strong>KubeStellar:</strong> {plugin.Compatibility.kubestellar}<br />
+                  <strong>KubeStellar:</strong> {plugin.Compatibility.kubestellar}
+                  <br />
                   <strong>Go:</strong> {plugin.Compatibility.go}
                 </Typography>
               </Alert>
@@ -350,9 +360,9 @@ const PluginDetails: React.FC<PluginDetailsProps> = ({
               Check Health
             </Button>
           )}
-          
+
           <Box sx={{ flexGrow: 1 }} />
-          
+
           {onUnload && (
             <Button
               variant="outlined"
@@ -363,7 +373,7 @@ const PluginDetails: React.FC<PluginDetailsProps> = ({
               Unload Plugin
             </Button>
           )}
-          
+
           <Button onClick={onClose} variant="contained">
             Close
           </Button>

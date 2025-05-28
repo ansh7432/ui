@@ -17,17 +17,7 @@ import {
   CircularProgress,
   Tooltip,
 } from '@mui/material';
-import {
-  MoreVertical,
-  Play,
-
-  Trash2,
-  Info,
-
-  CheckCircle,
-  AlertCircle,
-  Clock,
-} from 'lucide-react';
+import { MoreVertical, Play, Trash2, Info, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 import useTheme from '../../stores/themeStore';
 
 interface Plugin {
@@ -155,7 +145,7 @@ const PluginList: React.FC<PluginListProps> = ({
   return (
     <>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {pluginList.map((plugin) => (
+        {pluginList.map(plugin => (
           <Card
             key={plugin.ID}
             sx={{
@@ -163,15 +153,17 @@ const PluginList: React.FC<PluginListProps> = ({
               border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`,
               transition: 'all 0.2s ease-in-out',
               '&:hover': {
-                boxShadow: isDark 
-                  ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)' 
+                boxShadow: isDark
+                  ? '0 4px 6px -1px rgba(0, 0, 0, 0.3)'
                   : '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
                 transform: 'translateY(-1px)',
               },
             }}
           >
             <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <Box
+                sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}
+              >
                 <Box sx={{ flex: 1 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                     {getStatusIcon(plugin)}
@@ -194,12 +186,8 @@ const PluginList: React.FC<PluginListProps> = ({
                       variant="filled"
                     />
                   </Box>
-                  
-                  <Typography
-                    variant="body2"
-                    color="textSecondary"
-                    sx={{ mb: 2, lineHeight: 1.5 }}
-                  >
+
+                  <Typography variant="body2" color="textSecondary" sx={{ mb: 2, lineHeight: 1.5 }}>
                     {plugin.Description}
                   </Typography>
 
@@ -242,7 +230,7 @@ const PluginList: React.FC<PluginListProps> = ({
                       <Play size={16} />
                     </IconButton>
                   </Tooltip>
-                  
+
                   <Tooltip title="View Details">
                     <IconButton
                       size="small"
@@ -255,7 +243,7 @@ const PluginList: React.FC<PluginListProps> = ({
 
                   <IconButton
                     size="small"
-                    onClick={(e) => handleMenuOpen(e, plugin)}
+                    onClick={e => handleMenuOpen(e, plugin)}
                     sx={{ color: isDark ? '#9ca3af' : '#6b7280' }}
                   >
                     <MoreVertical size={16} />
@@ -278,11 +266,21 @@ const PluginList: React.FC<PluginListProps> = ({
           },
         }}
       >
-        <MenuItem onClick={() => { onViewDetails(selectedPlugin!); handleMenuClose(); }}>
+        <MenuItem
+          onClick={() => {
+            onViewDetails(selectedPlugin!);
+            handleMenuClose();
+          }}
+        >
           <Info size={16} style={{ marginRight: 8 }} />
           View Details
         </MenuItem>
-        <MenuItem onClick={() => { onCheckHealth(selectedPlugin!.ID); handleMenuClose(); }}>
+        <MenuItem
+          onClick={() => {
+            onCheckHealth(selectedPlugin!.ID);
+            handleMenuClose();
+          }}
+        >
           <Play size={16} style={{ marginRight: 8 }} />
           Check Health
         </MenuItem>
@@ -305,7 +303,8 @@ const PluginList: React.FC<PluginListProps> = ({
         <DialogTitle>Unload Plugin</DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to unload this plugin? This action will remove all plugin routes and functionality.
+            Are you sure you want to unload this plugin? This action will remove all plugin routes
+            and functionality.
           </Typography>
         </DialogContent>
         <DialogActions>

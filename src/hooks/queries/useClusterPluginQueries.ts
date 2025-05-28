@@ -31,7 +31,7 @@ export const useClusterPluginQueries = () => {
       queryFn: () => PluginService.getPlugin(PLUGIN_ID),
       retry: false,
       refetchInterval: 1000 * 10, // Check every 10 seconds
-      select: (data) => ({
+      select: data => ({
         available: true,
         version: data.plugin.Version,
         routes: data.routes,
@@ -47,19 +47,15 @@ export const useClusterPluginQueries = () => {
       queryKey: ['cluster-plugin-statuses'],
       queryFn: async (): Promise<ClusterStatusResponse> => {
         const data = await PluginService.callPluginEndpoint(PLUGIN_ID, '/status', 'GET');
-        
+
         // Safe type conversion with proper checking
         const unknownData = data as unknown;
         const typedData = unknownData as ClusterStatusResponse;
-        
+
         // Type guard and transformation with fallbacks
         return {
-          clusters: Array.isArray(typedData.clusters) 
-            ? typedData.clusters 
-            : [],
-          plugin: typeof typedData.plugin === 'string' 
-            ? typedData.plugin 
-            : PLUGIN_ID,
+          clusters: Array.isArray(typedData.clusters) ? typedData.clusters : [],
+          plugin: typeof typedData.plugin === 'string' ? typedData.plugin : PLUGIN_ID,
         };
       },
       enabled: true, // Will fail gracefully if plugin not loaded
@@ -76,16 +72,17 @@ export const useClusterPluginQueries = () => {
     return useMutation({
       mutationFn: async (request: ClusterOnboardRequest) => {
         const response = await PluginService.callPluginEndpoint(
-          PLUGIN_ID, 
-          '/onboard', 
-          'POST', 
+          PLUGIN_ID,
+          '/onboard',
+          'POST',
           request as unknown as Record<string, unknown>
         );
         return response;
       },
-      onSuccess: (data) => {
+      onSuccess: data => {
         const unknownData = data as unknown;
-        const message = (unknownData as { message?: string }).message || 'Cluster onboarding started';
+        const message =
+          (unknownData as { message?: string }).message || 'Cluster onboarding started';
         toast.success(`Cluster onboarding started via plugin: ${message}`);
         console.log('Plugin onboard response:', data);
       },
@@ -101,16 +98,17 @@ export const useClusterPluginQueries = () => {
     return useMutation({
       mutationFn: async (request: ClusterDetachRequest) => {
         const response = await PluginService.callPluginEndpoint(
-          PLUGIN_ID, 
-          '/detach', 
-          'POST', 
+          PLUGIN_ID,
+          '/detach',
+          'POST',
           request as unknown as Record<string, unknown>
         );
         return response;
       },
-      onSuccess: (data) => {
+      onSuccess: data => {
         const unknownData = data as unknown;
-        const message = (unknownData as { message?: string }).message || 'Cluster detachment started';
+        const message =
+          (unknownData as { message?: string }).message || 'Cluster detachment started';
         toast.success(`Cluster detachment started via plugin: ${message}`);
         console.log('Plugin detach response:', data);
       },

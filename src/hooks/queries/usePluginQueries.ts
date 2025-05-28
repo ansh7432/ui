@@ -1,9 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
-import { 
-  PluginService, 
-  LoadPluginFromGitHubRequest, 
-  LoadPluginFromFileRequest
+import {
+  PluginService,
+  LoadPluginFromGitHubRequest,
+  LoadPluginFromFileRequest,
 } from '../../services/pluginService';
 
 export const usePluginQueries = () => {
@@ -16,7 +16,7 @@ export const usePluginQueries = () => {
       queryFn: () => PluginService.listPlugins(),
       staleTime: 1000 * 60, // 1 minute
       refetchInterval: 1000 * 30, // Auto-refresh every 30 seconds
-      select: (data) => ({
+      select: data => ({
         plugins: Object.values(data.plugins),
         count: data.count,
         pluginsMap: data.plugins,
@@ -51,16 +51,16 @@ export const usePluginQueries = () => {
       queryKey: ['available-plugins'],
       queryFn: () => PluginService.discoverPlugins(),
       staleTime: 1000 * 60 * 5, // 5 minutes
-      select: (data) => data.available,
+      select: data => data.available,
     });
   };
 
   // Load plugin from GitHub
   const useLoadPluginFromGitHub = () => {
     return useMutation({
-      mutationFn: (request: LoadPluginFromGitHubRequest) => 
+      mutationFn: (request: LoadPluginFromGitHubRequest) =>
         PluginService.loadPluginFromGitHub(request),
-      onSuccess: (data) => {
+      onSuccess: data => {
         queryClient.invalidateQueries({ queryKey: ['plugins'] });
         toast.success(`Plugin loaded successfully from ${data.repoUrl}`);
         console.log('Plugin loaded from GitHub:', data);
@@ -75,9 +75,8 @@ export const usePluginQueries = () => {
   // Load plugin from local file
   const useLoadPluginFromFile = () => {
     return useMutation({
-      mutationFn: (request: LoadPluginFromFileRequest) => 
-        PluginService.loadPluginFromFile(request),
-      onSuccess: (data) => {
+      mutationFn: (request: LoadPluginFromFileRequest) => PluginService.loadPluginFromFile(request),
+      onSuccess: data => {
         queryClient.invalidateQueries({ queryKey: ['plugins'] });
         toast.success(`Plugin loaded successfully from ${data.pluginPath}`);
         console.log('Plugin loaded from file:', data);
@@ -93,7 +92,7 @@ export const usePluginQueries = () => {
   const useUnloadPlugin = () => {
     return useMutation({
       mutationFn: (pluginId: string) => PluginService.unloadPlugin(pluginId),
-      onSuccess: (data) => {
+      onSuccess: data => {
         queryClient.invalidateQueries({ queryKey: ['plugins'] });
         queryClient.removeQueries({ queryKey: ['plugin-details', data.pluginId] });
         queryClient.removeQueries({ queryKey: ['plugin-health', data.pluginId] });
@@ -110,16 +109,16 @@ export const usePluginQueries = () => {
   // Generic plugin endpoint caller
   const useCallPluginEndpoint = () => {
     return useMutation({
-      mutationFn: ({ 
-        pluginId, 
-        endpoint, 
-        method = 'GET', 
-        data 
-      }: { 
-        pluginId: string; 
-        endpoint: string; 
-        method?: 'GET' | 'POST' | 'PUT' | 'DELETE'; 
-        data?: Record<string, unknown>
+      mutationFn: ({
+        pluginId,
+        endpoint,
+        method = 'GET',
+        data,
+      }: {
+        pluginId: string;
+        endpoint: string;
+        method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
+        data?: Record<string, unknown>;
       }) => PluginService.callPluginEndpoint(pluginId, endpoint, method, data),
       onError: (error: Error) => {
         toast.error(`Plugin API call failed: ${error.message}`);

@@ -389,9 +389,7 @@ const PluginManagement: React.FC = () => {
                         {plugin.name}
                       </Typography>
                       <Box sx={{ display: 'flex', gap: 1 }}>
-                        {plugin.official && (
-                          <Chip label="Official" color="primary" size="small" />
-                        )}
+                        {plugin.official && <Chip label="Official" color="primary" size="small" />}
                         {getStatusChip(plugin.id)}
                       </Box>
                     </Box>

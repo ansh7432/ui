@@ -89,7 +89,9 @@ export class PluginService {
     return response.data;
   }
 
-  static async loadPluginFromGitHub(request: LoadPluginFromGitHubRequest): Promise<PluginLoadResponse> {
+  static async loadPluginFromGitHub(
+    request: LoadPluginFromGitHubRequest
+  ): Promise<PluginLoadResponse> {
     const response = await api.post('/api/plugins/load', request);
     return response.data;
   }
@@ -111,14 +113,14 @@ export class PluginService {
 
   // Plugin-specific API calls
   static async callPluginEndpoint(
-    pluginId: string, 
-    endpoint: string, 
+    pluginId: string,
+    endpoint: string,
     method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET',
     data?: Record<string, unknown>
   ): Promise<Record<string, unknown>> {
     // Use the new endpoint structure
     const url = `/api/plugin-endpoints/${pluginId}${endpoint}`;
-    
+
     try {
       switch (method) {
         case 'GET': {
@@ -144,7 +146,9 @@ export class PluginService {
       if (error.response?.status === 404) {
         throw new Error(`Plugin ${pluginId} or endpoint ${endpoint} not found`);
       } else if (error.response?.status === 400) {
-        throw new Error(`Bad request to plugin endpoint: ${error.response?.data?.error || error.message}`);
+        throw new Error(
+          `Bad request to plugin endpoint: ${error.response?.data?.error || error.message}`
+        );
       } else {
         throw new Error(`Plugin endpoint call failed: ${error.message}`);
       }

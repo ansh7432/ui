@@ -17,15 +17,7 @@ import {
   CircularProgress,
   Alert,
 } from '@mui/material';
-import {
-  Search,
-  Download,
-  Star,
-  Github,
-  Package,
-  Shield,
-  Clock,
-} from 'lucide-react';
+import { Search, Download, Star, Github, Package, Shield, Clock } from 'lucide-react';
 import useTheme from '../../stores/themeStore';
 
 interface AvailablePlugin {
@@ -72,10 +64,12 @@ const PluginStore: React.FC<PluginStoreProps> = ({
 
   // Filter plugins based on search and category
   const filteredPlugins = availablePlugins.filter(plugin => {
-    const matchesSearch = plugin.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         plugin.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || 
-                           (plugin.categories && plugin.categories.includes(selectedCategory));
+    const matchesSearch =
+      plugin.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      plugin.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory =
+      selectedCategory === 'all' ||
+      (plugin.categories && plugin.categories.includes(selectedCategory));
     return matchesSearch && matchesCategory;
   });
 
@@ -95,11 +89,11 @@ const PluginStore: React.FC<PluginStoreProps> = ({
   const getCategoryColor = (category: string) => {
     const colors = {
       'cluster-management': 'primary',
-      'monitoring': 'secondary',
-      'security': 'error',
-      'networking': 'info',
-      'storage': 'warning',
-      'development': 'success',
+      monitoring: 'secondary',
+      security: 'error',
+      networking: 'info',
+      storage: 'warning',
+      development: 'success',
     };
     return colors[category as keyof typeof colors] || 'default';
   };
@@ -120,7 +114,7 @@ const PluginStore: React.FC<PluginStoreProps> = ({
           <TextField
             placeholder="Search plugins..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={e => setSearchTerm(e.target.value)}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -139,7 +133,7 @@ const PluginStore: React.FC<PluginStoreProps> = ({
               },
             }}
           />
-          
+
           <Button
             variant="outlined"
             onClick={onRefresh}
@@ -155,7 +149,7 @@ const PluginStore: React.FC<PluginStoreProps> = ({
 
         {/* Category Filter */}
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-          {categories.map((category) => (
+          {categories.map(category => (
             <Chip
               key={category}
               label={category.replace('-', ' ').toUpperCase()}
@@ -163,12 +157,9 @@ const PluginStore: React.FC<PluginStoreProps> = ({
               variant={selectedCategory === category ? 'filled' : 'outlined'}
               onClick={() => setSelectedCategory(category)}
               sx={{
-                backgroundColor: selectedCategory === category 
-                  ? (isDark ? '#3b82f6' : '#2563eb')
-                  : 'transparent',
-                color: selectedCategory === category 
-                  ? '#ffffff'
-                  : (isDark ? '#e5e7eb' : '#374151'),
+                backgroundColor:
+                  selectedCategory === category ? (isDark ? '#3b82f6' : '#2563eb') : 'transparent',
+                color: selectedCategory === category ? '#ffffff' : isDark ? '#e5e7eb' : '#374151',
                 borderColor: isDark ? '#374151' : '#d1d5db',
               }}
             />
@@ -183,7 +174,7 @@ const PluginStore: React.FC<PluginStoreProps> = ({
         </Alert>
       ) : (
         <Grid container spacing={3}>
-          {filteredPlugins.map((plugin) => (
+          {filteredPlugins.map(plugin => (
             <Grid item xs={12} md={6} lg={4} key={plugin.id}>
               <Card
                 sx={{
@@ -192,8 +183,8 @@ const PluginStore: React.FC<PluginStoreProps> = ({
                   border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`,
                   transition: 'all 0.2s ease-in-out',
                   '&:hover': {
-                    boxShadow: isDark 
-                      ? '0 8px 25px -5px rgba(0, 0, 0, 0.3)' 
+                    boxShadow: isDark
+                      ? '0 8px 25px -5px rgba(0, 0, 0, 0.3)'
                       : '0 8px 25px -5px rgba(0, 0, 0, 0.1)',
                     transform: 'translateY(-2px)',
                   },
@@ -201,7 +192,14 @@ const PluginStore: React.FC<PluginStoreProps> = ({
               >
                 <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                   {/* Header */}
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'flex-start',
+                      mb: 2,
+                    }}
+                  >
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Typography variant="h6" component="h3" noWrap>
                         {plugin.name}
@@ -215,11 +213,7 @@ const PluginStore: React.FC<PluginStoreProps> = ({
                         />
                       )}
                     </Box>
-                    <Chip
-                      label={plugin.version}
-                      size="small"
-                      variant="outlined"
-                    />
+                    <Chip label={plugin.version} size="small" variant="outlined" />
                   </Box>
 
                   {/* Description */}
@@ -235,7 +229,7 @@ const PluginStore: React.FC<PluginStoreProps> = ({
                   {plugin.categories && (
                     <Box sx={{ mb: 2 }}>
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                        {plugin.categories.map((category) => (
+                        {plugin.categories.map(category => (
                           <Chip
                             key={category}
                             label={category}
@@ -275,7 +269,8 @@ const PluginStore: React.FC<PluginStoreProps> = ({
                   {plugin.compatibility && (
                     <Box sx={{ mb: 2 }}>
                       <Typography variant="caption" color="textSecondary">
-                        Requires: KubeStellar {plugin.compatibility.kubestellar}, Go {plugin.compatibility.go}
+                        Requires: KubeStellar {plugin.compatibility.kubestellar}, Go{' '}
+                        {plugin.compatibility.go}
                       </Typography>
                     </Box>
                   )}
@@ -328,7 +323,7 @@ const PluginStore: React.FC<PluginStoreProps> = ({
               <Typography variant="body2" color="textSecondary" paragraph>
                 {selectedPlugin.description}
               </Typography>
-              
+
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
                 <Github size={16} />
                 <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
@@ -338,7 +333,8 @@ const PluginStore: React.FC<PluginStoreProps> = ({
 
               {selectedPlugin.compatibility && (
                 <Alert severity="info" sx={{ mt: 2 }}>
-                  This plugin requires KubeStellar {selectedPlugin.compatibility.kubestellar} and Go {selectedPlugin.compatibility.go}
+                  This plugin requires KubeStellar {selectedPlugin.compatibility.kubestellar} and Go{' '}
+                  {selectedPlugin.compatibility.go}
                 </Alert>
               )}
             </Box>
@@ -346,7 +342,11 @@ const PluginStore: React.FC<PluginStoreProps> = ({
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setInstallDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleInstallConfirm} variant="contained" startIcon={<Download size={16} />}>
+          <Button
+            onClick={handleInstallConfirm}
+            variant="contained"
+            startIcon={<Download size={16} />}
+          >
             Install Plugin
           </Button>
         </DialogActions>

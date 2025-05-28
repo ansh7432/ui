@@ -13,12 +13,7 @@ import {
   Card,
   CardContent,
 } from '@mui/material';
-import {
-  Upload,
-  FileText,
-  Github,
-  CheckCircle,
-} from 'lucide-react';
+import { Upload, FileText, Github, CheckCircle } from 'lucide-react';
 import useTheme from '../../stores/themeStore';
 
 interface PluginUploaderProps {
@@ -54,22 +49,23 @@ const PluginUploader: React.FC<PluginUploaderProps> = ({
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
-    
+
     const files = Array.from(e.dataTransfer.files);
     const soFile = files.find(f => f.name.endsWith('.so'));
     const yamlFile = files.find(f => f.name.endsWith('.yaml') || f.name.endsWith('.yml'));
-    
+
     if (soFile) setPluginFile(soFile);
     if (yamlFile) setManifestFile(yamlFile);
   }, []);
 
-  const handleFileChange = (type: 'plugin' | 'manifest') => (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (type === 'plugin') setPluginFile(file);
-      else setManifestFile(file);
-    }
-  };
+  const handleFileChange =
+    (type: 'plugin' | 'manifest') => (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        if (type === 'plugin') setPluginFile(file);
+        else setManifestFile(file);
+      }
+    };
 
   const handleLocalUpload = () => {
     if (pluginFile && manifestFile) {
@@ -101,9 +97,7 @@ const PluginUploader: React.FC<PluginUploaderProps> = ({
           startIcon={<Github size={16} />}
           sx={{
             borderColor: isDark ? '#374151' : '#d1d5db',
-            color: activeTab === 'github' 
-              ? '#ffffff' 
-              : (isDark ? '#e5e7eb' : '#374151'),
+            color: activeTab === 'github' ? '#ffffff' : isDark ? '#e5e7eb' : '#374151',
           }}
         >
           From GitHub
@@ -114,9 +108,7 @@ const PluginUploader: React.FC<PluginUploaderProps> = ({
           startIcon={<Upload size={16} />}
           sx={{
             borderColor: isDark ? '#374151' : '#d1d5db',
-            color: activeTab === 'local' 
-              ? '#ffffff' 
-              : (isDark ? '#e5e7eb' : '#374151'),
+            color: activeTab === 'local' ? '#ffffff' : isDark ? '#e5e7eb' : '#374151',
           }}
         >
           Local Files
@@ -136,9 +128,10 @@ const PluginUploader: React.FC<PluginUploaderProps> = ({
               <Github size={20} />
               <Typography variant="h6">Install from GitHub Repository</Typography>
             </Box>
-            
+
             <Typography variant="body2" color="textSecondary" sx={{ mb: 3 }}>
-              Enter the GitHub repository URL to install the plugin directly from the latest release.
+              Enter the GitHub repository URL to install the plugin directly from the latest
+              release.
             </Typography>
 
             <TextField
@@ -146,12 +139,12 @@ const PluginUploader: React.FC<PluginUploaderProps> = ({
               label="GitHub Repository URL"
               placeholder="https://github.com/username/plugin-repository"
               value={repoUrl}
-              onChange={(e) => setRepoUrl(e.target.value)}
+              onChange={e => setRepoUrl(e.target.value)}
               error={repoUrl.length > 0 && !isValidGitHubUrl(repoUrl)}
               helperText={
                 repoUrl.length > 0 && !isValidGitHubUrl(repoUrl)
-                  ? "Please enter a valid GitHub repository URL"
-                  : "The plugin will be installed from the latest release"
+                  ? 'Please enter a valid GitHub repository URL'
+                  : 'The plugin will be installed from the latest release'
               }
               sx={{
                 mb: 3,
@@ -166,7 +159,8 @@ const PluginUploader: React.FC<PluginUploaderProps> = ({
 
             <Alert severity="info" sx={{ mb: 3 }}>
               <Typography variant="body2">
-                Make sure the repository has a valid plugin.yaml manifest and compiled .so files in its releases.
+                Make sure the repository has a valid plugin.yaml manifest and compiled .so files in
+                its releases.
               </Typography>
             </Alert>
 
@@ -198,11 +192,15 @@ const PluginUploader: React.FC<PluginUploaderProps> = ({
             </Box>
 
             <Typography variant="body2" color="textSecondary" sx={{ mb: 3 }}>
-              Upload both the compiled plugin (.so file) and the manifest (.yaml file) to install a local plugin.
+              Upload both the compiled plugin (.so file) and the manifest (.yaml file) to install a
+              local plugin.
             </Typography>
 
             {/* Upload Steps */}
-            <Stepper activeStep={pluginFile && manifestFile ? 2 : pluginFile || manifestFile ? 1 : 0} sx={{ mb: 3 }}>
+            <Stepper
+              activeStep={pluginFile && manifestFile ? 2 : pluginFile || manifestFile ? 1 : 0}
+              sx={{ mb: 3 }}
+            >
               <Step>
                 <StepLabel>Upload Plugin Binary</StepLabel>
               </Step>
@@ -223,21 +221,27 @@ const PluginUploader: React.FC<PluginUploaderProps> = ({
                 p: 4,
                 mb: 3,
                 textAlign: 'center',
-                border: `2px dashed ${dragOver 
-                  ? (isDark ? '#3b82f6' : '#2563eb')
-                  : (isDark ? '#374151' : '#d1d5db')
+                border: `2px dashed ${
+                  dragOver ? (isDark ? '#3b82f6' : '#2563eb') : isDark ? '#374151' : '#d1d5db'
                 }`,
-                backgroundColor: dragOver 
-                  ? (isDark ? '#1e3a8a20' : '#3b82f620')
-                  : (isDark ? '#111827' : '#f9fafb'),
+                backgroundColor: dragOver
+                  ? isDark
+                    ? '#1e3a8a20'
+                    : '#3b82f620'
+                  : isDark
+                    ? '#111827'
+                    : '#f9fafb',
                 cursor: 'pointer',
                 transition: 'all 0.2s ease-in-out',
               }}
             >
-              <Upload size={48} style={{ 
-                color: isDark ? '#6b7280' : '#9ca3af',
-                marginBottom: '16px'
-              }} />
+              <Upload
+                size={48}
+                style={{
+                  color: isDark ? '#6b7280' : '#9ca3af',
+                  marginBottom: '16px',
+                }}
+              />
               <Typography variant="h6" gutterBottom>
                 Drag & Drop Files Here
               </Typography>
@@ -254,21 +258,12 @@ const PluginUploader: React.FC<PluginUploaderProps> = ({
                 startIcon={pluginFile ? <CheckCircle size={16} /> : <FileText size={16} />}
                 sx={{
                   flex: 1,
-                  borderColor: pluginFile 
-                    ? '#10b981' 
-                    : (isDark ? '#374151' : '#d1d5db'),
-                  color: pluginFile 
-                    ? '#10b981' 
-                    : (isDark ? '#e5e7eb' : '#374151'),
+                  borderColor: pluginFile ? '#10b981' : isDark ? '#374151' : '#d1d5db',
+                  color: pluginFile ? '#10b981' : isDark ? '#e5e7eb' : '#374151',
                 }}
               >
                 {pluginFile ? pluginFile.name : 'Select Plugin (.so)'}
-                <input
-                  type="file"
-                  hidden
-                  accept=".so"
-                  onChange={handleFileChange('plugin')}
-                />
+                <input type="file" hidden accept=".so" onChange={handleFileChange('plugin')} />
               </Button>
 
               <Button
@@ -277,12 +272,8 @@ const PluginUploader: React.FC<PluginUploaderProps> = ({
                 startIcon={manifestFile ? <CheckCircle size={16} /> : <FileText size={16} />}
                 sx={{
                   flex: 1,
-                  borderColor: manifestFile 
-                    ? '#10b981' 
-                    : (isDark ? '#374151' : '#d1d5db'),
-                  color: manifestFile 
-                    ? '#10b981' 
-                    : (isDark ? '#e5e7eb' : '#374151'),
+                  borderColor: manifestFile ? '#10b981' : isDark ? '#374151' : '#d1d5db',
+                  color: manifestFile ? '#10b981' : isDark ? '#e5e7eb' : '#374151',
                 }}
               >
                 {manifestFile ? manifestFile.name : 'Select Manifest (.yaml)'}
@@ -300,7 +291,8 @@ const PluginUploader: React.FC<PluginUploaderProps> = ({
               <Box sx={{ mb: 3 }}>
                 {pluginFile && (
                   <Alert severity="success" sx={{ mb: 1 }}>
-                    Plugin binary: {pluginFile.name} ({(pluginFile.size / 1024 / 1024).toFixed(2)} MB)
+                    Plugin binary: {pluginFile.name} ({(pluginFile.size / 1024 / 1024).toFixed(2)}{' '}
+                    MB)
                   </Alert>
                 )}
                 {manifestFile && (
@@ -310,12 +302,11 @@ const PluginUploader: React.FC<PluginUploaderProps> = ({
                 )}
                 {(!pluginFile || !manifestFile) && (
                   <Alert severity="warning">
-                    {!pluginFile && !manifestFile 
-                      ? "Please upload both plugin binary and manifest files"
-                      : !pluginFile 
-                        ? "Please upload the plugin binary (.so file)"
-                        : "Please upload the manifest (.yaml file)"
-                    }
+                    {!pluginFile && !manifestFile
+                      ? 'Please upload both plugin binary and manifest files'
+                      : !pluginFile
+                        ? 'Please upload the plugin binary (.so file)'
+                        : 'Please upload the manifest (.yaml file)'}
                   </Alert>
                 )}
               </Box>

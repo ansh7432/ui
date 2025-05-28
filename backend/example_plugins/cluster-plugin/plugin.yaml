@@ -7,20 +7,18 @@ compatibility:
   kubestellar: '>=0.21.0'
   go: '>=1.21'
 endpoints:
-  - path: /onboard
-    method: POST
-    handler: OnboardClusterHandler
-  - path: /detach
-    method: POST
-    handler: DetachClusterHandler
   - path: /status
     method: GET
-    handler: GetClusterStatusHandler
+    handler: GetStatusHandler
+  - path: /onboard
+    method: POST
+    handler: OnboardHandler
+  - path: /detach
+    method: POST
+    handler: DetachHandler
 dependencies:
   - kubectl
   - clusteradm
 permissions:
   - cluster.read
-  - cluster.write
-  - configmap.read
   - configmap.write

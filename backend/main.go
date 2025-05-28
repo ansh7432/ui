@@ -4,14 +4,15 @@ import (
     "bytes"
     "io"
     "log"
+    "net/http"
     "os"
     "strings"
     "time"
 
     "github.com/gin-gonic/gin"
-    "github.com/kubestellar/ui/routes"
     "github.com/kubestellar/ui/api"
     "github.com/kubestellar/ui/dynamic_plugins"
+    "github.com/kubestellar/ui/routes"
     "go.uber.org/zap"
 )
 
@@ -118,17 +119,19 @@ func setupPluginRoutes(router *gin.Engine) {
         // List all loaded plugins
         pluginGroup.GET("", ListPluginsHandler)
 
-        // Get specific plugin information
-        pluginGroup.GET("/:id", GetPluginHandler)
-
-        // Unload a specific plugin
-        pluginGroup.DELETE("/:id", UnloadPluginHandler)
-
-        // Get plugin health status
-        pluginGroup.GET("/:id/health", GetPluginHealthHandler)
-
         // Plugin discovery (list available plugins from registry)
         pluginGroup.GET("/discover", DiscoverPluginsHandler)
+
+        // Plugin-specific routes with different base path to avoid conflicts
+        pluginGroup.GET("/:id", GetPluginHandler)
+        pluginGroup.DELETE("/:id", UnloadPluginHandler)
+        pluginGroup.GET("/:id/health", GetPluginHealthHandler)
+    }
+
+    // Plugin endpoint calls - Use a different route structure to avoid conflicts
+    pluginEndpointGroup := router.Group("/api/plugin-endpoints")
+    {
+        pluginEndpointGroup.Any("/:pluginId/*endpoint", CallPluginEndpointHandler)
     }
 
     log.Println("Plugin management routes registered:")
@@ -139,6 +142,7 @@ func setupPluginRoutes(router *gin.Engine) {
     log.Println("  DELETE /api/plugins/:id")
     log.Println("  GET    /api/plugins/:id/health")
     log.Println("  GET    /api/plugins/discover")
+    log.Println("  ANY    /api/plugin-endpoints/:pluginId/*endpoint")
 }
 
 // Plugin management handlers
@@ -330,6 +334,45 @@ func DiscoverPluginsHandler(c *gin.Context) {
         "available": availablePlugins,
         "count":     len(availablePlugins),
     })
+}
+
+// CallPluginEndpointHandler calls a specific plugin endpoint
+func CallPluginEndpointHandler(c *gin.Context) {
+    pluginID := c.Param("pluginId")
+    endpoint := c.Param("endpoint")
+
+    // Get the loaded plugin
+    loadedPlugin, exists := pluginManager.GetPlugin(pluginID)
+    if !exists {
+        c.JSON(http.StatusNotFound, gin.H{"error": "Plugin not found"})
+        return
+    }
+
+    // Get the plugin's handlers
+    handlers := loadedPlugin.Plugin.GetHandlers()
+    metadata := loadedPlugin.Plugin.GetMetadata()
+
+    // Find the handler for this endpoint
+    var handlerFunc gin.HandlerFunc
+    var found bool
+
+    for _, endpointConfig := range metadata.Endpoints {
+        if endpointConfig.Path == endpoint {
+            if handler, exists := handlers[endpointConfig.Handler]; exists {
+                handlerFunc = handler
+                found = true
+                break
+            }
+        }
+    }
+
+    if !found {
+        c.JSON(http.StatusNotFound, gin.H{"error": "Endpoint not found"})
+        return
+    }
+
+    // Call the handler
+    handlerFunc(c)
 }
 
 // Initialize Zap Logger

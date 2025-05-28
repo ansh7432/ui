@@ -1,6 +1,7 @@
 package dynamic_plugins
 
 import (
+    "context" // Add this import
     "fmt"
     "io"
     "log"
@@ -53,8 +54,11 @@ func (pm *PluginManager) LoadPluginFromGitHub(repoURL string) error {
         return fmt.Errorf("invalid GitHub URL: %v", err)
     }
 
+    // Create context for GitHub API calls
+    ctx := context.Background()
+
     // Get latest release
-    release, _, err := pm.githubClient.Repositories.GetLatestRelease(nil, owner, repo)
+    release, _, err := pm.githubClient.Repositories.GetLatestRelease(ctx, owner, repo)
     if err != nil {
         return fmt.Errorf("failed to get latest release: %v", err)
     }

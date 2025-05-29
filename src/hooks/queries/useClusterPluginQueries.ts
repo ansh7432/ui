@@ -28,16 +28,24 @@ export const useClusterPluginQueries = () => {
   const useClusterPluginStatus = () => {
     return useQuery({
       queryKey: ['cluster-plugin-status'],
-      queryFn: () => PluginService.getPlugin(PLUGIN_ID),
+      queryFn: async () => {
+        // First check if plugin is loaded before trying to get details
+        const plugins = await PluginService.listPlugins();
+        if (!(PLUGIN_ID in plugins.plugins)) {
+          return { available: false, version: null, routes: [] };
+        }
+
+        // Only if plugin exists, get its details
+        const data = await PluginService.getPlugin(PLUGIN_ID);
+        return {
+          available: true,
+          version: data.plugin.Version,
+          routes: data.routes,
+        };
+      },
       retry: false,
       refetchInterval: 1000 * 10, // Check every 10 seconds
-      select: data => ({
-        available: true,
-        version: data.plugin.Version,
-        routes: data.routes,
-      }),
-      // Handle errors silently without throwing
-      throwOnError: false,
+      throwOnError: false, // Don't throw errors to avoid console spam
     });
   };
 
@@ -46,6 +54,12 @@ export const useClusterPluginQueries = () => {
     return useQuery({
       queryKey: ['cluster-plugin-statuses'],
       queryFn: async (): Promise<ClusterStatusResponse> => {
+        // First check if plugin is loaded
+        const plugins = await PluginService.listPlugins();
+        if (!(PLUGIN_ID in plugins.plugins)) {
+          throw new Error('Cluster plugin not loaded');
+        }
+
         const data = await PluginService.callPluginEndpoint(PLUGIN_ID, '/status', 'GET');
 
         // Safe type conversion with proper checking
@@ -58,12 +72,11 @@ export const useClusterPluginQueries = () => {
           plugin: typeof typedData.plugin === 'string' ? typedData.plugin : PLUGIN_ID,
         };
       },
-      enabled: true, // Will fail gracefully if plugin not loaded
+      enabled: false, // Start disabled - will be enabled conditionally
       refetchInterval: 1000 * 5, // Refresh every 5 seconds
       retry: false,
       select: (data: ClusterStatusResponse) => data.clusters || [],
-      // Silent fail if plugin not available
-      throwOnError: false,
+      throwOnError: false, // Silent fail if plugin not available
     });
   };
 
@@ -71,6 +84,12 @@ export const useClusterPluginQueries = () => {
   const usePluginOnboardCluster = () => {
     return useMutation({
       mutationFn: async (request: ClusterOnboardRequest) => {
+        // Check if plugin is loaded before attempting
+        const plugins = await PluginService.listPlugins();
+        if (!(PLUGIN_ID in plugins.plugins)) {
+          throw new Error('Cluster plugin is not loaded');
+        }
+
         const response = await PluginService.callPluginEndpoint(
           PLUGIN_ID,
           '/onboard',
@@ -97,6 +116,12 @@ export const useClusterPluginQueries = () => {
   const usePluginDetachCluster = () => {
     return useMutation({
       mutationFn: async (request: ClusterDetachRequest) => {
+        // Check if plugin is loaded before attempting
+        const plugins = await PluginService.listPlugins();
+        if (!(PLUGIN_ID in plugins.plugins)) {
+          throw new Error('Cluster plugin is not loaded');
+        }
+
         const response = await PluginService.callPluginEndpoint(
           PLUGIN_ID,
           '/detach',

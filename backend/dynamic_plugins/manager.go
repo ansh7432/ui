@@ -20,11 +20,12 @@ import (
 
 // PluginManager manages dynamic plugin loading and unloading
 type PluginManager struct {
-    plugins      map[string]*LoadedPlugin
-    router       *gin.Engine
-    pluginDir    string
-    mutex        sync.RWMutex
-    githubClient *github.Client
+    plugins          map[string]*LoadedPlugin
+    router           *gin.Engine
+    pluginDir        string
+    mutex            sync.RWMutex
+    githubClient     *github.Client
+    registeredRoutes map[string]bool // Add this to track registered routes
 }
 
 // LoadedPlugin represents a loaded plugin instance
@@ -38,10 +39,11 @@ type LoadedPlugin struct {
 // NewPluginManager creates a new plugin manager
 func NewPluginManager(router *gin.Engine, pluginDir string) *PluginManager {
     return &PluginManager{
-        plugins:      make(map[string]*LoadedPlugin),
-        router:       router,
-        pluginDir:    pluginDir,
-        githubClient: github.NewClient(nil),
+        plugins:          make(map[string]*LoadedPlugin),
+        router:           router,
+        pluginDir:        pluginDir,
+        githubClient:     github.NewClient(nil),
+        registeredRoutes: make(map[string]bool), // Initialize the route tracking map
     }
 }
 
@@ -359,24 +361,42 @@ func (pm *PluginManager) registerPluginRoutes(pluginID string, plugin Kubestella
             continue
         }
 
-        // Register the route
-        switch strings.ToUpper(endpoint.Method) {
-        case "GET":
-            pluginGroup.GET(endpoint.Path, handlerFunc)
-        case "POST":
-            pluginGroup.POST(endpoint.Path, handlerFunc)
-        case "PUT":
-            pluginGroup.PUT(endpoint.Path, handlerFunc)
-        case "DELETE":
-            pluginGroup.DELETE(endpoint.Path, handlerFunc)
-        default:
-            log.Printf("Warning: unsupported method %s for endpoint %s", endpoint.Method, endpoint.Path)
+        route := fmt.Sprintf("%s %s%s", endpoint.Method, fmt.Sprintf("/api/plugins/%s", pluginID), endpoint.Path)
+        
+        // Check if route is already registered
+        if pm.registeredRoutes[route] {
+            log.Printf("Warning: Route %s already registered, skipping...", route)
             continue
         }
 
-        route := fmt.Sprintf("%s %s%s", endpoint.Method, fmt.Sprintf("/api/plugins/%s", pluginID), endpoint.Path)
-        routes = append(routes, route)
-        log.Printf("Registered route: %s", route)
+        // Register the route with panic recovery
+        func() {
+            defer func() {
+                if r := recover(); r != nil {
+                    log.Printf("Failed to register route %s: %v", route, r)
+                }
+            }()
+
+            // Register the route
+            switch strings.ToUpper(endpoint.Method) {
+            case "GET":
+                pluginGroup.GET(endpoint.Path, handlerFunc)
+            case "POST":
+                pluginGroup.POST(endpoint.Path, handlerFunc)
+            case "PUT":
+                pluginGroup.PUT(endpoint.Path, handlerFunc)
+            case "DELETE":
+                pluginGroup.DELETE(endpoint.Path, handlerFunc)
+            default:
+                log.Printf("Warning: unsupported method %s for endpoint %s", endpoint.Method, endpoint.Path)
+                return
+            }
+
+            // Track the registered route
+            pm.registeredRoutes[route] = true
+            routes = append(routes, route)
+            log.Printf("Registered route: %s", route)
+        }()
     }
 
     return routes
@@ -392,13 +412,21 @@ func (pm *PluginManager) UnloadPlugin(pluginID string) error {
         return fmt.Errorf("plugin %s is not loaded", pluginID)
     }
 
+    log.Printf("Unloading plugin: %s", pluginID)
+
     // Cleanup plugin
     if err := loadedPlugin.Plugin.Cleanup(); err != nil {
         log.Printf("Warning: plugin cleanup failed: %v", err)
     }
 
+    // Clean up route tracking
+    for _, route := range loadedPlugin.Routes {
+        delete(pm.registeredRoutes, route)
+        log.Printf("Cleaned up route tracking for: %s", route)
+    }
+
     delete(pm.plugins, pluginID)
-    log.Printf("Plugin %s unloaded", pluginID)
+    log.Printf("Plugin %s unloaded successfully", pluginID)
     return nil
 }
 

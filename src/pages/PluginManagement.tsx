@@ -19,6 +19,17 @@ import {
   CircularProgress,
   Alert,
   Snackbar,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  Tooltip,
+  Menu,
+  MenuItem,
+  IconButton,
 } from '@mui/material';
 import {
   GitHub as GitHubIcon,
@@ -30,11 +41,17 @@ import {
   CloudDownload,
   Extension as ExtensionIcon,
   Computer as ComputerIcon,
+  ExpandMore as ExpandMoreIcon,
+  MoreVert as MoreVertIcon,
+  Info as InfoIcon,
+  Api as ApiIcon,
+  HealthAndSafety as HealthIcon,
+  Warning as WarningIcon,
 } from '@mui/icons-material';
 import { usePlugins } from '../hooks/usePlugins';
 import useTheme from '../stores/themeStore';
 import { toast } from 'react-hot-toast';
-import { PluginService } from '../services/pluginService';
+import { PluginService, PluginHealthResponse, EndpointConfig } from '../services/pluginService';
 import ClusterManagement from '../components/clusters/ClusterManagement';
 
 interface TabPanelProps {
@@ -84,8 +101,13 @@ const PluginManagement: React.FC = () => {
   const [showFileDialog, setShowFileDialog] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [clusterPluginLoaded, setClusterPluginLoaded] = useState(false);
+  const [pluginStatuses, setPluginStatuses] = useState<Record<string, PluginHealthResponse>>({});
+  const [pluginEndpoints, setPluginEndpoints] = useState<Record<string, EndpointConfig[]>>({});
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [selectedPlugin, setSelectedPlugin] = useState<string | null>(null);
+  const [isUninstalling, setIsUninstalling] = useState<string | null>(null);
 
-  // Check if cluster plugin is loaded
+  // Check if cluster plugin is loaded and fetch plugin statuses
   useEffect(() => {
     const checkClusterPlugin = async () => {
       try {
@@ -97,7 +119,28 @@ const PluginManagement: React.FC = () => {
       }
     };
 
+    const fetchPluginStatuses = async () => {
+      try {
+        const statuses = await PluginService.getAllPluginStatuses();
+        setPluginStatuses(statuses);
+
+        // Fetch endpoints for each plugin
+        const endpoints: Record<string, EndpointConfig[]> = {};
+        await Promise.all(
+          loadedPlugins.map(async plugin => {
+            endpoints[plugin.ID] = await PluginService.getPluginEndpoints(plugin.ID);
+          })
+        );
+        setPluginEndpoints(endpoints);
+      } catch (error) {
+        console.error('Error fetching plugin statuses:', error);
+      }
+    };
+
     checkClusterPlugin();
+    if (loadedPlugins.length > 0) {
+      fetchPluginStatuses();
+    }
   }, [loadedPlugins]);
 
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
@@ -145,26 +188,99 @@ const PluginManagement: React.FC = () => {
   };
 
   const handleUninstall = async (pluginId: string) => {
-    if (window.confirm(`Are you sure you want to uninstall ${pluginId}?`)) {
-      try {
-        await removePlugin(pluginId);
-        setSuccessMessage(`Plugin ${pluginId} uninstalled successfully!`);
-      } catch (error) {
-        console.error('Failed to uninstall plugin:', error);
+    if (
+      !window.confirm(
+        `Are you sure you want to uninstall "${pluginId}"?\n\nThis will stop the plugin and remove it from the system.`
+      )
+    ) {
+      return;
+    }
+
+    setIsUninstalling(pluginId);
+    try {
+      await removePlugin(pluginId);
+      setSuccessMessage(`Plugin "${pluginId}" uninstalled successfully!`);
+      toast.success(`Plugin "${pluginId}" uninstalled successfully!`);
+
+      // Update statuses
+      const newStatuses = { ...pluginStatuses };
+      delete newStatuses[pluginId];
+      setPluginStatuses(newStatuses);
+
+      // Update endpoints
+      const newEndpoints = { ...pluginEndpoints };
+      delete newEndpoints[pluginId];
+      setPluginEndpoints(newEndpoints);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      console.error('Failed to uninstall plugin:', error);
+      toast.error(`Failed to uninstall plugin: ${errorMessage}`);
+    } finally {
+      setIsUninstalling(null);
+    }
+  };
+
+  const handleTestEndpoint = async (pluginId: string, endpoint: EndpointConfig) => {
+    try {
+      const result = await PluginService.testPluginEndpoint(pluginId, endpoint);
+      if (result.success) {
+        toast.success(`Endpoint ${endpoint.Method} ${endpoint.Path} responded successfully`);
+        console.log('Endpoint response:', result.data);
+      } else {
+        toast.error(`Endpoint failed: ${result.error}`);
       }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      toast.error(`Failed to test endpoint: ${errorMessage}`);
+    }
+  };
+
+  const handleCheckHealth = async (pluginId: string) => {
+    try {
+      const health = await PluginService.getPluginHealth(pluginId);
+      setPluginStatuses(prev => ({ ...prev, [pluginId]: health }));
+
+      if (health.status === 'healthy') {
+        toast.success(`Plugin "${pluginId}" is healthy`);
+      } else {
+        toast.error(`Plugin "${pluginId}" is unhealthy: ${health.error}`);
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      toast.error(`Failed to check health: ${errorMessage}`);
     }
   };
 
   const getStatusChip = (pluginId: string) => {
     const isLoaded = isPluginLoaded(pluginId);
+    const health = pluginStatuses[pluginId];
+
+    if (!isLoaded) {
+      return <Chip icon={<ErrorIcon />} label="Not Loaded" color="default" size="small" />;
+    }
+
+    if (!health) {
+      return <Chip icon={<WarningIcon />} label="Unknown" color="warning" size="small" />;
+    }
+
     return (
       <Chip
-        icon={isLoaded ? <CheckCircle /> : <ErrorIcon />}
-        label={isLoaded ? 'Loaded' : 'Available'}
-        color={isLoaded ? 'success' : 'default'}
+        icon={health.status === 'healthy' ? <CheckCircle /> : <ErrorIcon />}
+        label={health.status === 'healthy' ? 'Healthy' : 'Unhealthy'}
+        color={health.status === 'healthy' ? 'success' : 'error'}
         size="small"
       />
     );
+  };
+
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, pluginId: string) => {
+    setAnchorEl(event.currentTarget);
+    setSelectedPlugin(pluginId);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setSelectedPlugin(null);
   };
 
   if (isLoading) {
@@ -354,9 +470,12 @@ const PluginManagement: React.FC = () => {
                   sx={{
                     backgroundColor: theme === 'dark' ? '#1E293B' : undefined,
                     border: theme === 'dark' ? '1px solid #374151' : undefined,
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
                   }}
                 >
-                  <CardContent>
+                  <CardContent sx={{ flexGrow: 1 }}>
                     <Box
                       sx={{
                         display: 'flex',
@@ -365,11 +484,21 @@ const PluginManagement: React.FC = () => {
                         mb: 2,
                       }}
                     >
-                      <Typography variant="h6" component="h3">
+                      <Typography variant="h6" component="h3" sx={{ flexGrow: 1, mr: 1 }}>
                         {plugin.Name}
                       </Typography>
-                      {getStatusChip(plugin.ID)}
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        {getStatusChip(plugin.ID)}
+                        <IconButton
+                          size="small"
+                          onClick={e => handleMenuOpen(e, plugin.ID)}
+                          sx={{ color: theme === 'dark' ? '#E5E7EB' : undefined }}
+                        >
+                          <MoreVertIcon />
+                        </IconButton>
+                      </Box>
                     </Box>
+
                     <Typography
                       variant="body2"
                       color="textSecondary"
@@ -380,30 +509,89 @@ const PluginManagement: React.FC = () => {
                     >
                       {plugin.Description}
                     </Typography>
+
                     <Box sx={{ mb: 1 }}>
                       <Typography variant="caption" color="textSecondary">
-                        Version: {plugin.Version}
+                        <strong>Version:</strong> {plugin.Version}
                       </Typography>
                     </Box>
                     <Box sx={{ mb: 1 }}>
                       <Typography variant="caption" color="textSecondary">
-                        Author: {plugin.Author}
+                        <strong>Author:</strong> {plugin.Author}
                       </Typography>
                     </Box>
-                    <Box sx={{ mb: 1 }}>
+                    <Box sx={{ mb: 2 }}>
                       <Typography variant="caption" color="textSecondary">
-                        Endpoints: {plugin.Endpoints.length}
+                        <strong>Endpoints:</strong> {plugin.Endpoints.length} routes
                       </Typography>
                     </Box>
+
+                    {/* Plugin Endpoints */}
+                    {plugin.Endpoints.length > 0 && (
+                      <Accordion sx={{ backgroundColor: 'transparent', boxShadow: 'none' }}>
+                        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                          <Typography variant="body2">
+                            <ApiIcon sx={{ fontSize: 16, mr: 1, verticalAlign: 'middle' }} />
+                            View Endpoints ({plugin.Endpoints.length})
+                          </Typography>
+                        </AccordionSummary>
+                        <AccordionDetails>
+                          <List dense>
+                            {plugin.Endpoints.map((endpoint, index) => (
+                              <ListItem
+                                key={index}
+                                secondaryAction={
+                                  <Button
+                                    size="small"
+                                    onClick={() => handleTestEndpoint(plugin.ID, endpoint)}
+                                  >
+                                    Test
+                                  </Button>
+                                }
+                              >
+                                <ListItemIcon>
+                                  <Chip
+                                    label={endpoint.Method}
+                                    size="small"
+                                    color={endpoint.Method === 'GET' ? 'primary' : 'secondary'}
+                                  />
+                                </ListItemIcon>
+                                <ListItemText
+                                  primary={endpoint.Path}
+                                  secondary={endpoint.Handler}
+                                />
+                              </ListItem>
+                            ))}
+                          </List>
+                        </AccordionDetails>
+                      </Accordion>
+                    )}
                   </CardContent>
+
                   <CardActions>
+                    <Tooltip title="Check plugin health">
+                      <Button
+                        size="small"
+                        startIcon={<HealthIcon />}
+                        onClick={() => handleCheckHealth(plugin.ID)}
+                      >
+                        Health
+                      </Button>
+                    </Tooltip>
                     <Button
                       size="small"
                       color="error"
-                      startIcon={<DeleteIcon />}
+                      startIcon={
+                        isUninstalling === plugin.ID ? (
+                          <CircularProgress size={16} />
+                        ) : (
+                          <DeleteIcon />
+                        )
+                      }
                       onClick={() => handleUninstall(plugin.ID)}
+                      disabled={isUninstalling === plugin.ID}
                     >
-                      Uninstall
+                      {isUninstalling === plugin.ID ? 'Uninstalling...' : 'Uninstall'}
                     </Button>
                   </CardActions>
                 </Card>
@@ -516,6 +704,55 @@ const PluginManagement: React.FC = () => {
           </Grid>
         )}
       </TabPanel>
+
+      {/* Plugin Actions Menu */}
+      <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
+        <MenuItem
+          onClick={() => {
+            if (selectedPlugin) handleCheckHealth(selectedPlugin);
+            handleMenuClose();
+          }}
+        >
+          <ListItemIcon>
+            <HealthIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Check Health</ListItemText>
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            if (selectedPlugin) {
+              const endpoints = pluginEndpoints[selectedPlugin] || [];
+              const endpointsList = endpoints.map(ep => `${ep.Method} ${ep.Path}`).join('\n');
+              alert(
+                `Available endpoints for ${selectedPlugin}:\n\n${endpointsList || 'No endpoints found'}`
+              );
+            }
+            handleMenuClose();
+          }}
+        >
+          <ListItemIcon>
+            <ApiIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>View Endpoints</ListItemText>
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            if (selectedPlugin) {
+              const plugin = loadedPlugins.find(p => p.ID === selectedPlugin);
+              if (plugin) {
+                const info = `Plugin: ${plugin.Name}\nID: ${plugin.ID}\nVersion: ${plugin.Version}\nAuthor: ${plugin.Author}\nDescription: ${plugin.Description}\nEndpoints: ${plugin.Endpoints.length}`;
+                alert(info);
+              }
+            }
+            handleMenuClose();
+          }}
+        >
+          <ListItemIcon>
+            <InfoIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Plugin Info</ListItemText>
+        </MenuItem>
+      </Menu>
 
       {/* Install from GitHub Dialog */}
       <Dialog

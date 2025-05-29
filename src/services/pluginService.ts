@@ -41,6 +41,7 @@ export interface PluginHealthResponse {
   status: 'healthy' | 'unhealthy';
   pluginId?: string;
   error?: string;
+  message?: string;
 }
 
 export interface AvailablePlugin {
@@ -117,8 +118,21 @@ export class PluginService {
   }
 
   static async getPluginHealth(pluginId: string): Promise<PluginHealthResponse> {
-    const response = await api.get(`/api/plugins/${pluginId}/health`);
-    return response.data;
+    try {
+      const response = await api.get(`/api/plugins/${pluginId}/health`);
+      return {
+        status: 'healthy',
+        pluginId,
+        message: 'Plugin is running normally',
+        ...response.data,
+      };
+    } catch (error: any) {
+      return {
+        status: 'unhealthy',
+        pluginId,
+        error: error.response?.data?.error || error.message || 'Health check failed',
+      };
+    }
   }
 
   static async loadPluginFromGitHub(
@@ -186,6 +200,29 @@ export class PluginService {
     }
   }
 
+  // Enhanced plugin management methods
+  static async getPluginEndpoints(pluginId: string): Promise<EndpointConfig[]> {
+    try {
+      const pluginDetails = await this.getPlugin(pluginId);
+      return pluginDetails.plugin.Endpoints || [];
+    } catch (error) {
+      console.error(`Failed to get endpoints for plugin ${pluginId}:`, error);
+      return [];
+    }
+  }
+
+  static async testPluginEndpoint(
+    pluginId: string,
+    endpoint: EndpointConfig
+  ): Promise<{ success: boolean; data?: any; error?: string }> {
+    try {
+      const result = await this.callPluginEndpoint(pluginId, endpoint.Path, endpoint.Method as any);
+      return { success: true, data: result };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  }
+
   // Cluster Plugin specific methods
   static async getClusterStatus(): Promise<ClusterStatusResponse> {
     // Fix: Use type assertion with unknown first
@@ -210,6 +247,25 @@ export class PluginService {
       return 'kubestellar-cluster-plugin' in plugins.plugins;
     } catch {
       return false;
+    }
+  }
+
+  // Utility methods for plugin status
+  static async getAllPluginStatuses(): Promise<Record<string, PluginHealthResponse>> {
+    try {
+      const plugins = await this.listPlugins();
+      const statuses: Record<string, PluginHealthResponse> = {};
+
+      await Promise.all(
+        Object.keys(plugins.plugins).map(async pluginId => {
+          statuses[pluginId] = await this.getPluginHealth(pluginId);
+        })
+      );
+
+      return statuses;
+    } catch (error) {
+      console.error('Failed to get plugin statuses:', error);
+      return {};
     }
   }
 }

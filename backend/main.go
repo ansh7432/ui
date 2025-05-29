@@ -315,19 +315,12 @@ func DiscoverPluginsHandler(c *gin.Context) {
         {
             "id":          "kubestellar-cluster-plugin",
             "name":        "KubeStellar Cluster Management",
-            "description": "Plugin for cluster onboarding and detachment operations",
+            "description": "Plugin for cluster onboarding and detachment operations dummy",
             "version":     "1.0.0",
-            "repoUrl":     "https://github.com/your-org/kubestellar-cluster-plugin",
+            "repoUrl":     "https://github.com/ansh7432/plugin",
             "official":    true,
         },
-        {
-            "id":          "kubestellar-monitoring-plugin",
-            "name":        "KubeStellar Monitoring",
-            "description": "Enhanced monitoring and observability for KubeStellar clusters",
-            "version":     "0.9.0",
-            "repoUrl":     "https://github.com/your-org/kubestellar-monitoring-plugin",
-            "official":    true,
-        },
+        
     }
 
     c.JSON(200, gin.H{

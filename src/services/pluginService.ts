@@ -73,6 +73,38 @@ export interface PluginLoadResponse {
   pluginPath?: string;
 }
 
+// Cluster Plugin specific interfaces
+export interface ClusterStatus {
+  clusterName: string;
+  status: string;
+  message?: string;
+  lastUpdated: string;
+}
+
+export interface ClusterStatusResponse {
+  clusters: ClusterStatus[];
+  summary: {
+    total: number;
+    ready: number;
+    pending: number;
+    failed: number;
+    detaching: number;
+  };
+  plugin: string;
+  timestamp: string;
+}
+
+// Fix: Add index signature to make these compatible with Record<string, unknown>
+export interface ClusterOnboardRequest extends Record<string, unknown> {
+  clusterName: string;
+  kubeconfig?: string;
+}
+
+export interface ClusterDetachRequest extends Record<string, unknown> {
+  clusterName: string;
+  force?: boolean;
+}
+
 export class PluginService {
   static async listPlugins(): Promise<PluginListResponse> {
     const response = await api.get('/api/plugins');
@@ -118,7 +150,6 @@ export class PluginService {
     method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET',
     data?: Record<string, unknown>
   ): Promise<Record<string, unknown>> {
-    // Use the new endpoint structure
     const url = `/api/plugin-endpoints/${pluginId}${endpoint}`;
 
     try {
@@ -154,4 +185,34 @@ export class PluginService {
       }
     }
   }
+
+  // Cluster Plugin specific methods
+  static async getClusterStatus(): Promise<ClusterStatusResponse> {
+    // Fix: Use type assertion with unknown first
+    const response = await this.callPluginEndpoint('kubestellar-cluster-plugin', '/status', 'GET');
+    return response as unknown as ClusterStatusResponse;
+  }
+
+  static async onboardCluster(request: ClusterOnboardRequest): Promise<any> {
+    // Fix: Now compatible since ClusterOnboardRequest extends Record<string, unknown>
+    return this.callPluginEndpoint('kubestellar-cluster-plugin', '/onboard', 'POST', request);
+  }
+
+  static async detachCluster(request: ClusterDetachRequest): Promise<any> {
+    // Fix: Now compatible since ClusterDetachRequest extends Record<string, unknown>
+    return this.callPluginEndpoint('kubestellar-cluster-plugin', '/detach', 'POST', request);
+  }
+
+  // Helper method to check if cluster plugin is loaded
+  static async isClusterPluginLoaded(): Promise<boolean> {
+    try {
+      const plugins = await this.listPlugins();
+      return 'kubestellar-cluster-plugin' in plugins.plugins;
+    } catch {
+      return false;
+    }
+  }
 }
+
+// Export the original service for backwards compatibility
+export const pluginService = PluginService;

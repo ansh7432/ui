@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Paper,
   Box,
@@ -29,10 +29,13 @@ import {
   Download as DownloadIcon,
   CloudDownload,
   Extension as ExtensionIcon,
+  Computer as ComputerIcon,
 } from '@mui/icons-material';
 import { usePlugins } from '../hooks/usePlugins';
 import useTheme from '../stores/themeStore';
 import { toast } from 'react-hot-toast';
+import { PluginService } from '../services/pluginService';
+import ClusterManagement from '../components/clusters/ClusterManagement';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -71,11 +74,31 @@ const PluginManagement: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState(0);
   const [repoUrl, setRepoUrl] = useState('');
-  const [pluginPath, setPluginPath] = useState('');
-  const [manifestPath, setManifestPath] = useState('');
+  const [pluginPath, setPluginPath] = useState(
+    '/Users/ishaan743/Kubestellar/ui/backend/example_plugins/cluster-plugin/kubestellar-cluster-plugin.so'
+  );
+  const [manifestPath, setManifestPath] = useState(
+    '/Users/ishaan743/Kubestellar/ui/backend/example_plugins/cluster-plugin/plugin.yaml'
+  );
   const [showInstallDialog, setShowInstallDialog] = useState(false);
   const [showFileDialog, setShowFileDialog] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [clusterPluginLoaded, setClusterPluginLoaded] = useState(false);
+
+  // Check if cluster plugin is loaded
+  useEffect(() => {
+    const checkClusterPlugin = async () => {
+      try {
+        const isLoaded = await PluginService.isClusterPluginLoaded();
+        setClusterPluginLoaded(isLoaded);
+      } catch (error) {
+        console.error('Error checking cluster plugin status:', error);
+        setClusterPluginLoaded(false);
+      }
+    };
+
+    checkClusterPlugin();
+  }, [loadedPlugins]);
 
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
@@ -108,8 +131,12 @@ const PluginManagement: React.FC = () => {
         pluginPath: pluginPath.trim(),
         manifestPath: manifestPath.trim(),
       });
-      setPluginPath('');
-      setManifestPath('');
+      setPluginPath(
+        '/Users/ishaan743/Kubestellar/ui/backend/example_plugins/cluster-plugin/kubestellar-cluster-plugin.so'
+      );
+      setManifestPath(
+        '/Users/ishaan743/Kubestellar/ui/backend/example_plugins/cluster-plugin/plugin.yaml'
+      );
       setShowFileDialog(false);
       setSuccessMessage('Plugin installed successfully from local file!');
     } catch (error) {
@@ -188,7 +215,7 @@ const PluginManagement: React.FC = () => {
             variant="body1"
             sx={{ color: theme === 'dark' ? '#AEBEDF' : 'text.secondary' }}
           >
-            Manage dynamic plugins for KubeStellar
+            Manage dynamic plugins and cluster operations for KubeStellar
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 2 }}>
@@ -219,6 +246,23 @@ const PluginManagement: React.FC = () => {
           </Button>
         </Box>
       </Box>
+
+      {/* Cluster Plugin Status Alert */}
+      {!clusterPluginLoaded && (
+        <Alert
+          severity="info"
+          sx={{ mb: 3 }}
+          action={
+            <Button color="inherit" size="small" onClick={() => setShowFileDialog(true)}>
+              Load Plugin
+            </Button>
+          }
+        >
+          <Typography variant="body2">
+            KubeStellar Cluster Plugin is not loaded. Load the plugin to manage clusters.
+          </Typography>
+        </Alert>
+      )}
 
       {/* Installation Progress */}
       {isInstalling && (
@@ -252,13 +296,21 @@ const PluginManagement: React.FC = () => {
             },
           }}
         >
-          <Tab label={`Installed Plugins (${loadedPlugins.length})`} />
-          <Tab label={`Available Plugins (${availablePlugins.length})`} />
+          {clusterPluginLoaded && <Tab label="Cluster Management" icon={<ComputerIcon />} />}
+          <Tab label={`Installed Plugins (${loadedPlugins.length})`} icon={<ExtensionIcon />} />
+          <Tab label={`Available Plugins (${availablePlugins.length})`} icon={<CloudDownload />} />
         </Tabs>
       </Box>
 
+      {/* Cluster Management Tab */}
+      {clusterPluginLoaded && (
+        <TabPanel value={activeTab} index={0}>
+          <ClusterManagement />
+        </TabPanel>
+      )}
+
       {/* Installed Plugins Tab */}
-      <TabPanel value={activeTab} index={0}>
+      <TabPanel value={activeTab} index={clusterPluginLoaded ? 1 : 0}>
         {loadedPlugins.length === 0 ? (
           <Box
             sx={{
@@ -277,6 +329,22 @@ const PluginManagement: React.FC = () => {
             <Typography variant="body1" color="textSecondary" sx={{ mb: 3 }}>
               Install plugins from GitHub or local files to get started.
             </Typography>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Button
+                variant="contained"
+                startIcon={<ExtensionIcon />}
+                onClick={() => setShowFileDialog(true)}
+              >
+                Load Cluster Plugin
+              </Button>
+              <Button
+                variant="outlined"
+                startIcon={<GitHubIcon />}
+                onClick={() => setShowInstallDialog(true)}
+              >
+                Install from GitHub
+              </Button>
+            </Box>
           </Box>
         ) : (
           <Grid container spacing={3}>
@@ -346,7 +414,7 @@ const PluginManagement: React.FC = () => {
       </TabPanel>
 
       {/* Available Plugins Tab */}
-      <TabPanel value={activeTab} index={1}>
+      <TabPanel value={activeTab} index={clusterPluginLoaded ? 2 : 1}>
         {availablePlugins.length === 0 ? (
           <Box
             sx={{
